@@ -8,6 +8,9 @@ export class Vector2Float extends Schema {          // Vector2Float === apple co
 
     @type("number")
     z = Math.floor(Math.random() * 256) - 128;
+
+    @type("uint32")
+    id = 0;
 }
 
 
@@ -19,7 +22,10 @@ export class Player extends Schema {
     z = Math.floor(Math.random() * 256) - 128;
 
     @type("uint8")
-    d = 2;
+    d = 0;
+
+    @type("uint16") 
+    score = 0;
 }
 
 export class State extends Schema {
@@ -29,9 +35,25 @@ export class State extends Schema {
     @type([Vector2Float]) 
     apples = new ArraySchema<Vector2Float>();
 
+    appleLastId = 0;
+
 
     createApple(){
-        this.apples.push(new Vector2Float());
+        const apple = new Vector2Float();
+        apple.id = this.appleLastId++;
+        this.apples.push(apple);
+        
+    }
+
+    collectApple(player: Player, data){
+        const apple = this.apples.find((value) => value.id === data.id);
+        if(apple === undefined) return;
+        
+        apple.x = Math.floor(Math.random() * 256) - 128;
+        apple.z = Math.floor(Math.random() * 256) - 128;
+
+        player.score++;
+        player.d = player.score;
     }
 
     createPlayer(sessionId: string) {
@@ -59,6 +81,12 @@ export class StateHandlerRoom extends Room<State> {
         this.onMessage("move", (client, data) => {
             this.state.movePlayer(client.sessionId, data);
         });
+
+        this.onMessage("collect", (client, data) => {
+            const player = this.state.players.get(client.sessionId);
+            this.state.collectApple(player, data);
+        });
+        
         for(let i =0; i<this.startAppleCount; i++){
             this.state.createApple();
         }
