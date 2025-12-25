@@ -22,7 +22,10 @@ export class Player extends Schema {
     z = Math.floor(Math.random() * 256) - 128;
 
     @type("uint8")
-    d = 2;
+    d = 0;
+
+    @type("uint16") 
+    score = 0;
 }
 
 export class State extends Schema {
@@ -45,8 +48,12 @@ export class State extends Schema {
     collectApple(player: Player, data){
         const apple = this.apples.find((value) => value.id === data.id);
         if(apple === undefined) return;
+        
         apple.x = Math.floor(Math.random() * 256) - 128;
         apple.z = Math.floor(Math.random() * 256) - 128;
+
+        player.score++;
+        player.d = player.score;
     }
 
     createPlayer(sessionId: string) {
