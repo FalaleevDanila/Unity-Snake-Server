@@ -1,6 +1,7 @@
 import { Room, Client } from "colyseus";
 import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 import { create } from "domain";
+import { resolve } from "path";
 
 export class Vector2Float extends Schema {          // Vector2Float === apple coordinates
     @type("number")
@@ -37,12 +38,13 @@ export class State extends Schema {
 
     appleLastId = 0;
 
+    gameOverIDs = [];
 
-    createApple(){
+
+    createApple() {
         const apple = new Vector2Float();
         apple.id = this.appleLastId++;
-        this.apples.push(apple);
-        
+        this.apples.push(apple);   
     }
 
     collectApple(player: Player, data){
@@ -61,12 +63,47 @@ export class State extends Schema {
     }
 
     removePlayer(sessionId: string) {
-        this.players.delete(sessionId);
+        if(this.players.has(sessionId)){
+            this.players.delete(sessionId);
+        }
     }
 
     movePlayer (sessionId: string, movement: any) {
         this.players.get(sessionId).x = movement.x;
         this.players.get(sessionId).z = movement.z;
+    }
+
+    gameOver(data) {
+        const detailsPositions = JSON.parse(data);
+        const clientID = detailsPositions.id;
+
+        const gameoverID = this.gameOverIDs.find((value) => value === clientID);
+        if(gameoverID !== undefined) return;
+
+        this.gameOverIDs.push(clientID);
+        this.delayClientGameoverIDs(clientID);
+
+        
+        this.removePlayer(clientID);
+        
+
+        for (let i = 0; i < detailsPositions.ds.length; i++) {
+            const apple = new Vector2Float();
+            apple.id = this.appleLastId++;
+            apple.x = detailsPositions.ds[i].x;
+            apple.z = detailsPositions.ds[i].z;
+            this.apples.push(apple);
+            
+        }
+    }
+    async delayClientGameoverIDs(clientID) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+
+        const index = this.gameOverIDs.findIndex((value) => value === clientID);
+        
+        if(index <= -1) return;
+
+        this.gameOverIDs.splice(index, 1);
     }
 }
 
@@ -86,10 +123,15 @@ export class StateHandlerRoom extends Room<State> {
             const player = this.state.players.get(client.sessionId);
             this.state.collectApple(player, data);
         });
+
+        this.onMessage("gameover", (client, data) => {
+            this.state.gameOver(data);
+        });
         
         for(let i =0; i<this.startAppleCount; i++){
             this.state.createApple();
         }
+        
     }
 
     onAuth(client, options, req) {
