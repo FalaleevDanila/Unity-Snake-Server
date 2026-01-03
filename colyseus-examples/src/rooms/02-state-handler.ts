@@ -16,17 +16,11 @@ export class Vector2Float extends Schema {          // Vector2Float === apple co
 
 
 export class Player extends Schema {
-    @type("number")
-    x = Math.floor(Math.random() * 256) - 128;
-
-    @type("number")
-    z = Math.floor(Math.random() * 256) - 128;
-
-    @type("uint8")
-    d = 0;
-
-    @type("uint16") 
-    score = 0;
+    @type("string") login = "";
+    @type("number") x = Math.floor(Math.random() * 256) - 128;
+    @type("number") z = Math.floor(Math.random() * 256) - 128;
+    @type("uint8")  d = 0;
+    @type("uint16") score = 0;
 }
 
 export class State extends Schema {
@@ -58,8 +52,10 @@ export class State extends Schema {
         player.d = player.score;
     }
 
-    createPlayer(sessionId: string) {
-        this.players.set(sessionId, new Player());
+    createPlayer(sessionId: string, login) {
+        const player = new Player();
+        player.login = login; 
+        this.players.set(sessionId, player);
     }
 
     removePlayer(sessionId: string) {
@@ -138,8 +134,8 @@ export class StateHandlerRoom extends Room<State> {
         return true;
     }
 
-    onJoin (client: Client) {
-        this.state.createPlayer(client.sessionId);
+    onJoin (client: Client, data) {
+        this.state.createPlayer(client.sessionId, data.login);
     }
 
     onLeave (client) {
